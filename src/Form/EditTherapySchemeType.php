@@ -39,11 +39,6 @@ class EditTherapySchemeType extends AbstractType
                 'label' => false,
                 'attr' => ['style' => 'display:none', 'readonly' => true]
             ])
-            ->add('stubsOrder', TextareaType::class, [
-                'required' => false,    
-                'label' => false,
-                'attr' => ['style' => 'display:none', 'readonly' => true],
-            ])
             ->add("updateCurrent", CheckboxType::class, [
                 'required' => false,
                 'label' => false,
@@ -58,10 +53,6 @@ class EditTherapySchemeType extends AbstractType
         $builder
             ->get('targets')
             ->addModelTransformer(new ArrayToStringTransformer());
-            
-        $builder
-        ->get('stubsOrder')
-        ->addModelTransformer(new ArrayToStringTransformer());
     }
 
 

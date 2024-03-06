@@ -21,12 +21,12 @@ class Label
     #[ORM\Column(type: 'string', length: 255, nullable: true)]
     private ?string $reportName;
 
-    #[ORM\OneToMany(mappedBy: "label", targetEntity: LabelStub::class, cascade: ["persist", "remove"])]
-    private ?Collection $labelStubs;
+    #[ORM\ManyToMany(targetEntity: Stub::class, inversedBy: 'labels')]
+    private ?Collection $stubs;
 
     public function __construct()
     {
-        $this->labelStubs = new ArrayCollection();
+        $this->stubs = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -58,91 +58,25 @@ class Label
         return $this;
     }
 
-    public function getLabelStubs(): ?Collection
-    {
-        return $this->labelStubs;
-    }
-
-    public function addLabelStub(LabelStub $labelStub): self
-    {
-        if (!$this->labelStubs->contains($labelStub)) {
-            $this->labelStubs[] = $labelStub;
-            $labelStub->setLabel($this);
-        }
-
-        return $this;
-    }
-
-    public function removeLabelStub(LabelStub $labelStub): self
-    {
-        if ($this->labelStubs->removeElement($labelStub)) {
-            // set the owning side to null (unless already changed)
-            if ($labelStub->getLabel() === $this) {
-                $labelStub->setLabel(null);
-            }
-        }
-
-        return $this;
-    }
-
     public function getStubs(): Collection
     {
-        $stubs = new ArrayCollection();
-        foreach ($this->labelStubs as $labelStub) {
-            $stubs[] = $labelStub->getStub();
-        }
-
-        return $stubs;
+        return $this->stubs;
     }
 
-    public function getStubsSortedByPosition(): Collection
+    public function addStub(Stub $stub): self
     {
-        $labelStubs = $this->labelStubs->toArray();
-
-        usort($labelStubs, function ($a, $b) {
-            // Order by position if both positions are not zero.
-            if ($a->getPosition() !== 0 && $b->getPosition() !== 0) {
-                return $a->getPosition() <=> $b->getPosition();
-            }
-    
-            // If one has position not equal to zero, prioritize it.
-            if ($a->getPosition() !== 0) {
-                return -1;
-            }
-    
-            if ($b->getPosition() !== 0) {
-                return 1;
-            }
-    
-            // If both have position equal to zero, maintain their original order.
-            return 0;
-        });
-
-        $stubs = new ArrayCollection();
-        foreach ($labelStubs as $labelStub) {
-            $stubs[] = $labelStub->getStub();
+        if (!$this->stubs->contains($stub)) {
+            $this->stubs[] = $stub;
         }
 
-        return $stubs;
+        return $this;
     }
 
-    public function addStub(Stub $stub): void
+    public function removeStub(Stub $stub): self
     {
-        $labelStub = new LabelStub();
-        $labelStub->setLabel($this);
-        $labelStub->setStub($stub);
+        $this->stubs->removeElement($stub);
 
-        $this->labelStubs[] = $labelStub;
-    }
-
-    public function deleteStub(Stub $stub): void
-    {
-        foreach ($this->labelStubs as $labelStub) {
-            if ($labelStub->getStub() === $stub) {
-                $this->labelStubs->removeElement($labelStub);
-                break;
-            }
-        }
+        return $this;
     }
 
     public function __toString(): string

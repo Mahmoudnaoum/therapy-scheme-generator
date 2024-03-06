@@ -4,7 +4,6 @@ namespace App\Controller\Therapy;
 
 use App\Entity\Therapy\Label;
 use App\Entity\Therapy\Stub;
-use App\Entity\Therapy\LabelStub;
 use App\Form\Therapy\LabelType;
 use App\Repository\Therapy\LabelRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -96,7 +95,7 @@ class LabelController extends AbstractController
             // TODO throw exception
         }
 
-        $stubs =  $label->getStubsSortedByPosition();
+        $stubs =  $label->getStubs();
 
         $labelForm = $this->createForm(LabelType::class, $label);
         $labelForm->handleRequest($request);
@@ -106,25 +105,6 @@ class LabelController extends AbstractController
             
             $label->setShortName($data->getShortName());
             $label->setReportName($data->getReportName());
-
-            $orderArray = explode(',', $labelForm->get('stubsOrder')->getData());
-
-            // Iterate over the array
-
-
-            foreach ($orderArray as $index => $stubId) {
-                // Find the corresponding label_stub record
-                if( $stubId ) {
-
-                    $labelStub = $this->entityManager->getRepository(LabelStub::class)->findOneBy(['stub' => $stubId]);
-                    
-                    // Update the position
-                    $labelStub->setPosition($index + 1);
-    
-                    // Persist the changes
-                    $this->entityManager->persist($labelStub);
-                }
-            }
             
             $this->entityManager->persist($label);
             $this->entityManager->flush();

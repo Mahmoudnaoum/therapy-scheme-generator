@@ -1,73 +1,42 @@
-
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>{% block title %}{{ 'app-project-title'|trans }}{% endblock %}</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 128 128%22><text y=%221.2em%22 font-size=%2296%22>⚫️</text></svg>">
-
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.4/jquery.min.js" integrity="sha512-pumBsjNRGGqkPzKHndZMaAG+bir374sORyzM3uulLV14lN5LyykqNk8eEeUlUkB3U0M4FApyaHraT65ihJhDpQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.14.0/Sortable.min.js"></script>
-
-    {# Run `composer require symfony/webpack-encore-bundle` to start using Symfony UX #}
-    {{ encore_entry_link_tags('app') }}
-    {% block stylesheets %}
-    {% endblock %}
-
-    {{ encore_entry_script_tags('app') }}
-    {% block javascripts %}
-    {% endblock %}
-</head>
-<body>
-
-{% include 'navbar.html.twig' %}
+{% extends 'base.html.twig' %}
 
 {% block body %}
 <div class="container">
     <h2>{{ 'app-label-edit-page-title'|trans }}</h2>
-
+    
     {{ form_start(labelForm) }}
-    <div>
-        <div class="mb-3">
-            {{ form_label(labelForm.shortName) }}
-            {{ form_widget(labelForm.shortName) }}
-        </div>
-        <div class="mb-3">
-            {{ form_label(labelForm.reportName) }}
-            {{ form_widget(labelForm.reportName) }}
-        </div>
-        <div class="mb-3">
-            <h3>{{ 'app-therapy-stubs-list-page-title'|trans }}</h3>
-            <div class="sorting-options">
-                <button id="sortAZ" class="btn btn-sm btn-secondary">A-Z</button>
-                <button id="sortZA" class="btn btn-sm btn-secondary">Z-A</button>
+        <div>
+            <div class="mb-3">
+                {{ form_label(labelForm.shortName) }}
+                {{ form_widget(labelForm.shortName) }}
             </div>
-            <ul id="sortableList">
-                {% for stub in stubs %}
-                    <li data-id="{{ stub.id }}">
-                        <a href="{{ path('app_therapy_stub_edit', {id: stub.id}) }}">
-                            {{ stub.name }}
-                        </a>
-                    </li>
-                {% endfor %}
-            </ul>
-        </div>
-        <div class="row">
-            <div class="col-1 mb-3">
+            <div class="mb-3">
+                {{ form_label(labelForm.reportName) }}
+                {{ form_widget(labelForm.reportName) }}
+            </div>
+            <div class="row">
+                <div class="col-1 mb-3">
                 {{ form_widget(labelForm.save) }}
-            </div>
-            <div class="col-2 mb-3">
+                </div>
+                <div class="col-2 mb-3">
                 {{ form_widget(labelForm.delete) }}
+                </div>
+            </div>
+            <div class="mb-3">
+                    <h3>{{ 'app-therapy-stubs-list-page-title'|trans }}</h3>
+                    <ul>
+                        {% for stub in stubs %}
+                            <li>
+                              <a href="{{ url('app_therapy_stub_edit', {id: stub.id}) }}">
+                                {{ stub.name }}
+                              </a>
+                            </li>
+                        {% endfor %}
+                    </ul>
             </div>
         </div>
-        {{ form_widget(labelForm.stubsOrder, {'attr': {'class': 'sortable-order'}}) }}
-
-    </div>
     {{ form_end(labelForm) }}
 </div>
-
 <div {{ stimulus_controller('label-edit', {
     targetUrl: url('app_therapy_label_delete', {id: currentId})
 }) }} class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModal" aria-hidden="true">
@@ -87,77 +56,4 @@
         </div>
     </div>
 </div>
-
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        var sortableList = document.getElementById('sortableList');
-        var sortAZButton = document.getElementById('sortAZ');
-        var sortZAButton = document.getElementById('sortZA');
-        var orderInput = document.querySelector('.sortable-order');
-
-        var sortable = new Sortable(sortableList, {
-            animation: 150,
-            onUpdate: function (evt) {
-                // Handle drag-and-drop reordering
-                var movedItem = evt.from.children[evt.oldIndex];
-                var movedItemId = movedItem.dataset.id;
-
-                // Update the order input value with the new order
-                updateOrderInput();
-
-            },
-        });
-
-        function updateOrderInput() {
-            var items = Array.from(sortableList.children);
-            var order = items.map(function (item) {
-                return item.dataset.id;
-            }).join(',');
-
-            orderInput.value = order;
-        }
-
-        sortAZButton.addEventListener('click', function (event) {
-            event.preventDefault();
-            // Sort the list A-Z by stub name
-            var items = Array.from(sortableList.children);
-            items.sort(function (a, b) {
-                var nameA = a.textContent.trim().toUpperCase();
-                var nameB = b.textContent.trim().toUpperCase();
-                return nameA.localeCompare(nameB);
-            });
-
-            sortableList.innerHTML = '';
-            items.forEach(function (item) {
-                sortableList.appendChild(item);
-            });
-
-            updateOrderInput();
-
-        });
-
-        sortZAButton.addEventListener('click', function (event) {
-            event.preventDefault();
-            // Sort the list Z-A by stub name
-            var items = Array.from(sortableList.children);
-            items.sort(function (a, b) {
-                var nameA = a.textContent.trim().toUpperCase();
-                var nameB = b.textContent.trim().toUpperCase();
-                return nameB.localeCompare(nameA);
-            });
-
-            sortableList.innerHTML = '';
-            items.forEach(function (item) {
-                sortableList.appendChild(item);
-            });
-
-            updateOrderInput();
-
-        });
-    });
-</script>
-
 {% endblock %}
-
-</body>
-</html>
