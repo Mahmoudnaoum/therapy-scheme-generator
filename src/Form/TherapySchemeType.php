@@ -43,11 +43,6 @@ class TherapySchemeType extends AbstractType
                 'required' => false,
                 'label' => false,
                 'attr' => ['style' => 'display:none', 'readonly' => true]
-            ])
-            ->add('stubsOrder', TextareaType::class, [
-                'required' => false,
-                'label' => false,
-                'attr' => ['style' => 'display:none', 'readonly' => true]
             ]);
 
     }

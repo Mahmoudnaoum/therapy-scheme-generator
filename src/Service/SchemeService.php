@@ -3,20 +3,17 @@
 namespace App\Service;
 
 use App\Repository\Therapy\LabelRepository;
-use App\Repository\Therapy\StubRepository;
 use Symfony\Contracts\Translation\TranslatorInterface;
 
 class SchemeService
 {
 
   private $labelRepository;
-  private $stubRepository;
   private $translator;
 
-  public function __construct(LabelRepository $labelRepository, StubRepository $stubRepository, TranslatorInterface $translator)
+  public function __construct(LabelRepository $labelRepository, TranslatorInterface $translator)
   {
     $this->labelRepository = $labelRepository;
-    $this->stubRepository = $stubRepository;
     $this->translator = $translator;
   }
 
@@ -25,71 +22,25 @@ class SchemeService
     $suppress,
     $currentComments,
     $checkedCheckboxes,
-    $stubsOrder = [],
     $excerpt,
     $currentLanguage
   ): string {
     $newTbody = '';
-    
-    foreach ($stubsOrder as $order) {
-        $labelID = $order[0][0];
-        $stubIDs = $order[0][1];
 
-        if (in_array($labelID, $selectedLabels)) {
-            $index = array_search($labelID, $selectedLabels);
-            unset($selectedLabels[$index]);
-
-            $label = $this->labelRepository->find($labelID);
-            $labelStubs = [];
-
-            foreach ($stubIDs as $stubID) {
-                $stub = $this->stubRepository->find($stubID);
-                if ($stub) {
-                    $labelStubs[] = $stub;
-                }
-            }
-
-            $newTbody .= $this->generateLabelTbody($label, $labelStubs, $suppress, $currentComments, $checkedCheckboxes, $excerpt, $currentLanguage);
-
-        }
-    }
-    
-    // Generate tbody for remaining selected labels
     foreach ($selectedLabels as $labelID) {
       $label = $this->labelRepository->find($labelID);
       if(is_null($label)) {
         continue;
       }
-      $labelStubs = $label->getStubsSortedByPosition();
-      $newTbody .= $this->generateLabelTbody($label, $labelStubs, $suppress, $currentComments, $checkedCheckboxes, $excerpt, $currentLanguage);
-    }
+      $labelStubs = $label->getStubs();
 
-    return $newTbody;
-  }
-
-  private function generateLabelTbody($label, $labelStubs, $suppress, $currentComments, $checkedCheckboxes, $excerpt, $currentLanguage) {
-      $newTbody = '';
-      $tbodyId = 'oldTbody' . $label->getId();
-      $newTbody .= '<tbody id="' . $tbodyId . '" class="sortable">';      
-
-
-      $trClass = 'table-light hideLabels filtered';
+      $trClass = 'table-light hideLabels';
       if ($suppress) {
-          $trClass .= ' d-none';
+        $trClass .= ' d-none';
       }
       $newTbody .= '<tr class="' . $trClass . '" id="rowLabel|' . $label->getId() . '">' .
-          '<th colspan="5">' . $label->getReportName() . '</th>' .
-          '</tr>';
-      
-      // Sorting buttons
-      $newTbody .= '<tr class="sorting-buttons-row filtered">' .
-          '<td colspan="5">' . // Extend colspan to cover all columns
-          '<div class="d-flex justify-content-start">' . // Flex container for left alignment
-          '<button class="btn btn-sm btn-secondary sortAZ me-2" data-tbody="' . $tbodyId . '"><i class="fas fa-sort-alpha-down"></i> A-Z</button>' .
-          '<button class="btn btn-sm btn-secondary sortZA" data-tbody="' . $tbodyId . '"><i class="fas fa-sort-alpha-up"></i> Z-A</button>' .
-          '</div>' .
-          '</td>' .
-          '</tr>';
+        '<th colspan="5">' . $label->getShortName() . '</th>' .
+        '</tr>';
 
       if (count($labelStubs) > 0) {
         foreach ($labelStubs as $stub) {
@@ -154,119 +105,87 @@ class SchemeService
           '</th>' .
           '</tr>';
       }
+    }
 
-      $newTbody .= '</tbody>'; // Close the tbody for each label
-      return $newTbody;
+    return $newTbody;
   }
+
   public function generatePDFReport(
     $selectedLabels,
     $suppress,
     $currentComments,
     $checkedCheckboxes,
-    $stubsOrder,
     $excerpt,
   ): string {
-  
-    $newTbody = '';
-    foreach ($stubsOrder as $order) {
-      $labelID = $order[0][0];
-      $stubIDs = $order[0][1];
-  
-      if (in_array($labelID, $selectedLabels)) {
-          $index = array_search($labelID, $selectedLabels);
-          unset($selectedLabels[$index]);
-  
-          $label = $this->labelRepository->find($labelID);
-          $labelStubs = [];
-  
-          foreach ($stubIDs as $stubID) {
-              $stub = $this->stubRepository->find($stubID);
-              if ($stub) {
-                  $labelStubs[] = $stub;
-              }
-          }
-  
-          $newTbody .= $this->generateLabelTbodyPDF($label, $labelStubs, $suppress, $currentComments, $checkedCheckboxes, $excerpt);
 
-      }
-    }
-  
-    // Generate tbody for remaining selected labels
+    $newTbody = '';
+
     foreach ($selectedLabels as $labelID) {
       $label = $this->labelRepository->find($labelID);
       if(is_null($label)) {
         continue;
       }
-      $labelStubs = $label->getStubsSortedByPosition();
-      $newTbody .= $this->generateLabelTbodyPDF($label, $labelStubs, $suppress, $currentComments, $checkedCheckboxes, $excerpt);
-    }
-  
-    return $newTbody;
-  
-  }
-  private function generateLabelTbodyPDF($label, $labelStubs, $suppress, $currentComments, $checkedCheckboxes, $excerpt) {
+      $labelStubs = $label->getStubs();
 
-  
-    $newTbody = '';
-    $trLabel = '';
-    if (!$suppress) {
-      $trLabel .= '<tr class="table-light" id="rowLabel|' . $label->getId() . '">' .
-        '<th colspan="5">' . $label->getReportName() . '</th>' .
-        '</tr>';
-    }
-    $newTbody .= $trLabel;
-  
-    foreach ($labelStubs as $stub) {
-  
-      // todo: dont show the line, if checkbox is not checked and show comments in a new row
-      // // * Start Checkbox
-      $inputKey = 'targets|labelID=' . $label->getId() . '|stubID=' . $stub->getId();
-      // check $inputKey if exist in $checkedCheckboxes
-      $exists = true;
-      foreach ($checkedCheckboxes as $checkboxKey) {
-        if ($checkboxKey == $inputKey) {
-          $exists = false;
+      $trLabel = '';
+      if (!$suppress) {
+        $trLabel .= '<tr class="table-light" id="rowLabel|' . $label->getId() . '">' .
+          '<th colspan="5">' . $label->getShortName() . '</th>' .
+          '</tr>';
+      }
+      $newTbody .= $trLabel;
+
+      foreach ($labelStubs as $stub) {
+
+        // todo: dont show the line, if checkbox is not checked and show comments in a new row
+        // // * Start Checkbox
+        $inputKey = 'targets|labelID=' . $label->getId() . '|stubID=' . $stub->getId();
+        // check $inputKey if exist in $checkedCheckboxes
+        $exists = true;
+        foreach ($checkedCheckboxes as $checkboxKey) {
+          if ($checkboxKey == $inputKey) {
+            $exists = false;
+          }
+        }
+
+        if ($exists) {
+          continue;
+        }
+
+        $descriptionExcerptItem = '';
+        if ($excerpt) {
+          $descriptionExcerptItem = '<td ></td><td>' .
+            $stub->getExcerpt() .
+            '</td>';
+        } else {
+          // 100px;
+          $descriptionExcerptItem = '<td ></td><td>' .
+            $stub->getDescription() .
+            '</td>';
+        }
+
+
+        $newTbody .= '<tr id="rowLabel|' . $label->getId() . '|stub|' . $stub->getId() . '">' .
+          '<td class="col-2">' .
+          $stub->getName() .
+          '</td>' .
+          $descriptionExcerptItem .
+          '</tr>';
+
+        // Comment Section
+        $commentKey = 'labelID=' . $label->getId() . '|stubID=' . $stub->getId();
+
+        $comment = '';
+        foreach ($currentComments as $currentComment) {
+          if ($currentComment['key'] == $commentKey) {
+            $comment = $currentComment['comment'];
+          }
+        }
+        if ($comment != '') {
+          $newTbody .= '<tr><td colspan="3">' . $comment . '</td></tr>';
         }
       }
-  
-      if ($exists) {
-        continue;
-      }
-  
-      $descriptionExcerptItem = '';
-      if ($excerpt) {
-        $descriptionExcerptItem = '<td ></td><td>' .
-          $stub->getExcerpt() .
-          '</td>';
-      } else {
-        // 100px;
-        $descriptionExcerptItem = '<td ></td><td>' .
-          $stub->getDescription() .
-          '</td>';
-      }
-   
-      $newTbody .= '<tr id="rowLabel|' . $label->getId() . '|stub|' . $stub->getId() . '">' .
-        '<td class="col-2">' .
-        $stub->getName() .
-        '</td>' .
-        $descriptionExcerptItem .
-        '</tr>';
-  
-      // Comment Section
-      $commentKey = 'labelID=' . $label->getId() . '|stubID=' . $stub->getId();
-  
-      $comment = '';
-      foreach ($currentComments as $currentComment) {
-        if ($currentComment['key'] == $commentKey) {
-          $comment = $currentComment['comment'];
-        }
-      }
-      if ($comment != '') {
-        $newTbody .= '<tr><td colspan="3">' . $comment . '</td></tr>';
-      }
     }
-
     return $newTbody;
   }
-  
 }
