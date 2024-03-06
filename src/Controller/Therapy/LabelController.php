@@ -93,7 +93,7 @@ class LabelController extends AbstractController
         $label = $this->entityManager->getRepository(Label::class)->find($id);
         
         if (!$label) {
-            // TODO throw exception
+            //  TODO throw exception
         }
 
         $stubs =  $label->getStubsSortedByPosition();
