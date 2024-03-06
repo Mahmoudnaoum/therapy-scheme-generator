@@ -52,26 +52,30 @@ class SchemeController extends AbstractController
             $targets = json_decode($formData['targets'], true);
             $scheme->setTargets($targets);
 
-            $comments = json_decode($formData['comments'], true);
-            if ($comments === null) {
-                $comments = [];
-            }
-            $scheme->setComments($comments);
+            $stubsOrder = json_decode($formData['stubsOrder'], true);
 
+            if ($stubsOrder === null) {
+                $stubsOrder = [];
+            }
+            $scheme->setStubsOrder($stubsOrder);
+            
+            $comments = json_decode($formData['comments'], true);
+            $scheme->setComments($comments);
+            
             $scheme->setSuppress($formData['suppress']);
             $scheme->setExcerpt($formData['excerpt']);
-
+            
             $scheme->setCreatedAt(new \DateTimeImmutable());
             $scheme->setUpdatedAt(new \DateTimeImmutable());
             $labelIDs = $labels->map(fn (Label $label) => $label->getId())->toArray();
             $scheme->setSelectedLabels($labelIDs);
-
+            
             // * Store the scheme in the session
             $session = $request->getSession();
             $session->set('scheme', $scheme);
             return $this->redirectToRoute('app_therapy_scheme_saveAsTemplate');
         }
-
+        
         return $this->render('therapy/scheme/create.html.twig', [
             'form' => $form->createView(),
         ]);
@@ -129,6 +133,7 @@ class SchemeController extends AbstractController
         $currentLanguage = $requestData['currentLanguage'];
         $currentComments = $requestData['currentComments'];
         $notCheckedCheckboxes = $requestData['notCheckedCheckboxes'];
+        $stubsOrder = $requestData['stubsOrder'];
         $suppress = $requestData['suppress'];
         $excerpt = $requestData['excerpt'];
 
@@ -137,6 +142,7 @@ class SchemeController extends AbstractController
             $suppress,
             $currentComments,
             $notCheckedCheckboxes,
+            $stubsOrder,
             $excerpt,
             $currentLanguage
         );
@@ -158,22 +164,24 @@ class SchemeController extends AbstractController
         $selectedLabels = $requestData['selectedLabels'];
         $currentComments = $requestData['currentComments'];
         $notCheckedCheckboxes = $requestData['notCheckedCheckboxes'];
+        $stubsOrder = $requestData['stubsOrder'];
         $suppress = $requestData['suppress'];
         $excerpt = $requestData['excerpt'];
-
-
+            
         $reportContent = $schemeService->generatePDFReport(
             $selectedLabels,
             $suppress,
             $currentComments,
             $notCheckedCheckboxes,
+            $stubsOrder,
             $excerpt
         );
+        
 
         $session = $request->getSession();
         $session->set('reportContent', $reportContent);
         $session->set('reportExcerpt', $excerpt);
-
+        
         return new JsonResponse(['success' => true], 200);
     }
 
@@ -186,29 +194,30 @@ class SchemeController extends AbstractController
         LabelService $labelService
     ): Response {
         $currentLanguage = $request->getLocale();
-
+             
         $editedScheme = $schemeRepository->find($id);
-
+        
         $selectedLabels = $editedScheme->getSelectedLabels(); // IDs
-
+        
         // * Going to be used in the form (Entity Type)
         $selectedLabelsEntities = $labelService->getLabelsByIds($selectedLabels);
-
+                  
         $currentComments = $editedScheme->getComments();
         $notCheckedCheckboxes = $editedScheme->getTargets();
-
+        $stubsOrder = $editedScheme->getStubsOrder();
         $suppress = $editedScheme->isSuppress();
         $excerpt = $editedScheme->isExcerpt();
-
+        
         $oldTbody = $schemeService->generateTbody(
             $selectedLabels,
             $suppress,
             $currentComments,
             $notCheckedCheckboxes,
+            $stubsOrder,
             $excerpt,
             $currentLanguage
         );
-
+        
         $form = $this->createForm(EditTherapySchemeType::class, $editedScheme);
         $form->add('labels', EntityType::class, [
             'class' => Label::class,
@@ -217,6 +226,7 @@ class SchemeController extends AbstractController
             'mapped' => false,
             'data' => $selectedLabelsEntities,
         ]);
+        
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
@@ -226,29 +236,35 @@ class SchemeController extends AbstractController
             if (count($labels) === 0) {
                 return $this->redirect($request->headers->get('referer'));
             }
-
+            
             $updateCurrent = $form->get('updateCurrent')->getData();
-
+            
             if ($updateCurrent) {
                 $scheme = $editedScheme;
             } else {
                 $scheme = new Scheme();
             }
-
+            
             $formData = $form->getData();
-
+            
             $targets = $formData->getTargets();
             $scheme->setTargets($targets);
+            $stubsOrder = $formData->getStubsOrder();
+            if(is_null($stubsOrder)) {
+                $stubsOrder = [];
+            }            
 
+            $scheme->setStubsOrder($stubsOrder);
+                  
             $comments = $formData->getComments();
             $scheme->setComments($comments);
-
+            
             $suppress = $formData->isSuppress();
             $scheme->setSuppress($suppress);
-
+            
             $excerpt = $formData->isExcerpt();
             $scheme->setExcerpt($excerpt);
-
+            
             $scheme->setCreatedAt(new \DateTimeImmutable());
             $scheme->setUpdatedAt(new \DateTimeImmutable());
             $labelIDs = [];
@@ -256,13 +272,14 @@ class SchemeController extends AbstractController
                 $labelIDs[] = $label->getId();
             }
             $scheme->setSelectedLabels($labelIDs);
-
+            
             // * Store the scheme in the session
             $session = $request->getSession();
             $session->set('scheme', $scheme);
+            
             return $this->redirectToRoute('app_therapy_scheme_saveAsTemplate');
         }
-
+         
         return $this->render('therapy/scheme/edit.html.twig', [
             'scheme' => $editedScheme,
             'form' => $form->createView(),
@@ -273,7 +290,7 @@ class SchemeController extends AbstractController
             'selectedLabels' => $selectedLabels
         ]);
     }
-
+    
     #[Route('/{_locale<%app.supported_locales%>}/therapy/scheme/save-as-template', name: 'app_therapy_scheme_saveAsTemplate', methods: ['GET', 'POST'])]
     public function saveAsTemplate(Request $request, SchemeRepository $schemeRepository): Response
     {
@@ -284,19 +301,20 @@ class SchemeController extends AbstractController
         }
         $scheme = new Scheme();
         $scheme->setName('Date: ' . date(DATE_RSS));
-
+        
         $isEditing = $data->getId() != null;
         $toBeUpdatedScheme = null;
-
+        
         if ($isEditing) {
             $toBeUpdatedScheme = $schemeRepository->find($data->getId());
             $scheme->setName($toBeUpdatedScheme->getName());
         }
-
+        
         $form = $this->createForm(SchemeTemplateType::class, $scheme);
         $form->handleRequest($request);
-
+        
         if ($form->isSubmitted() && $form->isValid()) {
+            
             $data->setName($scheme->getName());
             if ($isEditing) {
                 // * Update existing scheme
@@ -304,6 +322,7 @@ class SchemeController extends AbstractController
                 $toBeUpdatedScheme->setSelectedLabels($data->getSelectedLabels());
                 $toBeUpdatedScheme->setTargets($data->getTargets());
                 $toBeUpdatedScheme->setComments($data->getComments());
+                $toBeUpdatedScheme->setStubsOrder($data->getStubsOrder());
                 $toBeUpdatedScheme->setSuppress($data->isSuppress());
                 $toBeUpdatedScheme->setExcerpt($data->isExcerpt());
                 $toBeUpdatedScheme->setUpdatedAt(new \DateTimeImmutable());
@@ -311,7 +330,7 @@ class SchemeController extends AbstractController
                 $this->entityManager->persist($data);
             }
             $this->entityManager->flush();
-
+            
             $session->set('scheme', null);
             return $this->redirectToRoute('app_therapy_scheme_templates_list');
         }
@@ -343,7 +362,7 @@ class SchemeController extends AbstractController
     {
         $session = $request->getSession();
         $reportContent = $session->get('reportContent');
-        $reportExcerpt = $session->get('reportExcerpt');
+        $reportExcerpt = $session->get('reportExcerpt');        
         if (!$reportContent) {
             return $this->redirectToRoute('app_therapy_scheme_create');
         }

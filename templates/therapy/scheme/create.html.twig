@@ -101,8 +101,11 @@
 {% endblock %}
 {% block javascripts %}
 <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<script src="https://unpkg.com/sortablejs@1.14.0/Sortable.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
 <script>
+    
 let selectedLabels = [];
 $(document).ready(function () {
     $("#therapy_scheme_labels")
@@ -123,9 +126,11 @@ $(document).ready(function () {
 
                 const currentComments = getCurrentComments();
                 const notCheckedCheckboxes = getNotCheckedCheckboxes();
+                const stubsOrder = getStubsOrder();
                 const suppress = $("#therapy_scheme_suppress").is(":checked");
                 const excerpt = $("#therapy_scheme_excerpt").is(":checked");
-                await generateDynamicForm(selectedValues, currentComments, notCheckedCheckboxes, suppress, excerpt);
+                await generateDynamicForm(selectedValues, currentComments, notCheckedCheckboxes, stubsOrder, suppress, excerpt);
+                initializeSortableForTables();
 
                 {# * Show/hide content #}
                 if (selectedValues.length > 0) {
@@ -138,6 +143,60 @@ $(document).ready(function () {
 
         });
 });
+
+// Function to initialize Sortable for each tbody
+function initializeSortableForTables() {
+    const tbodyElements = document.querySelectorAll('.sortable');
+
+    tbodyElements.forEach(tbody => {
+        const sortable = new Sortable(tbody, {
+            filter: '.filtered',
+            onMove(evt, oe) {
+                // Check if the related element has the class 'filtered'
+                return evt.related.className.indexOf('filtered') === -1;
+            },
+            preventOnFilter: true,
+        });
+    });
+}
+
+function getStubsOrder() {
+    // Get all tbody elements with the class 'sortable'
+    const tbodyElements = document.querySelectorAll('tbody.sortable');
+
+    const labelOrderArray = []; // Define an array to store JSON representations
+
+    tbodyElements.forEach(tbody => {
+        // Get all rows in the current tbody
+        const rows = Array.from(tbody.children);
+
+        const labelOrderMap = new Map(); // Define a map for each tbody
+
+        rows
+            .filter((_, index) => index !== 0) // Skip the first row
+            .forEach(function(row) {
+                const match = row.id.match(/rowLabel\|(\d+)\|stub\|(\d+)/);
+                if(match) {
+
+                    const labelId = match[1];
+                    const stubId = match[2];
+
+                    if (!labelOrderMap.has(labelId)) {
+                        labelOrderMap.set(labelId, []);
+                    }
+
+                    labelOrderMap.get(labelId).push(stubId);
+
+                }
+            });
+
+        // Convert labelOrderMap to JSON and push it to labelOrderArray
+        labelOrderArray.push([...labelOrderMap]);
+    });
+
+    // Return the array if needed
+    return labelOrderArray;
+}
 
 // * A function that returns an array of the comments
 const getCurrentComments = () => {
@@ -167,10 +226,15 @@ const getNotCheckedCheckboxes = () => {
 };
 
 {# ! Generate the dynamic form #}
-const generateDynamicForm = async (selectedLabels, currentComments, notCheckedCheckboxes, suppress, excerpt) => {
-    const tableBody = document.querySelector("table tbody");
+const generateDynamicForm = async (selectedLabels, currentComments, notCheckedCheckboxes, stubsOrder, suppress, excerpt) => {
+    // Get all tbody elements
+    const tbodyElements = document.querySelectorAll("table tbody");
+
     if (selectedLabels.length === 0) {
-        tableBody.innerHTML = "";
+        // Clear the content of all tbody elements
+        tbodyElements.forEach(tbody => {
+            tbody.remove();
+        });
     } else {
         const currentLanguage = "{{ app.request.locale }}";
         const url = "{{ path('app_therapy_scheme_generateForm') }}";
@@ -179,16 +243,80 @@ const generateDynamicForm = async (selectedLabels, currentComments, notCheckedCh
             currentLanguage,
             currentComments,
             notCheckedCheckboxes,
+            stubsOrder,
             suppress,
             excerpt
         };
-        const response = await axios.post(url, requestBody);
-        tableBody.innerHTML = response.data;
+
+        try {
+            // Send a POST request
+            const response = await axios.post(url, requestBody);
+
+            // Remove all existing tbody elements
+            tbodyElements.forEach(tbody => {
+                tbody.remove();
+            });
+
+            // Append new tbody sections from the response HTML
+            document.querySelector("table").insertAdjacentHTML('beforeend', response.data);
+            sortInit();
+        } catch (error) {
+            console.error("Error:", error);
+        }
     }
 };
 
+
+function sortInit() {
+
+    $('.sortAZ').each(function() {
+        $(this).on('click', function(event) {
+            event.preventDefault(); // Prevent the default form submission behavior
+            var tbodyId = $(this).data('tbody');
+            sortTable(tbodyId, 'asc');
+        });
+    });
+
+    $('.sortZA').each(function() {
+        $(this).on('click', function(event) {
+            event.preventDefault(); // Prevent the default form submission behavior
+            var tbodyId = $(this).data('tbody');
+            sortTable(tbodyId, 'desc');
+        });
+    });
+}
+
+function sortTable(tbodyId, order) {
+    var $tbody = $('#' + tbodyId);
+    var rows = $tbody.find('tr').toArray();
+
+    // Exclude the first two rows from sorting
+    var rowsToSort = rows.slice(2);
+
+    rowsToSort.sort(function(a, b) {
+        var nameA = $(a).find('.col-2').text().toUpperCase();
+        var nameB = $(b).find('.col-2').text().toUpperCase();
+        
+        if (order === 'asc') {
+            return nameA.localeCompare(nameB);
+        } else {
+            return nameB.localeCompare(nameA);
+        }
+    });
+
+    // Remove subsequent rows after the second one
+    rows.slice(2).forEach(function(row) {
+        row.remove();
+    });
+
+    // Append the sorted rows after the second row
+    rowsToSort.forEach(function(row) {
+        $tbody.append(row);
+    });
+}
+
 {# ! Generate the Report #}
-const generateReport = async (selectedLabels, currentComments, notCheckedCheckboxes, suppress, excerpt) => {
+const generateReport = async (selectedLabels, currentComments, notCheckedCheckboxes, stubsOrder, suppress, excerpt) => {
     if (selectedLabels.length > 0) {
         const currentLanguage = "{{ app.request.locale }}";
         const url = "{{ path('app_therapy_scheme_generateReport') }}";
@@ -197,6 +325,7 @@ const generateReport = async (selectedLabels, currentComments, notCheckedCheckbo
             currentLanguage,
             currentComments,
             notCheckedCheckboxes,
+            stubsOrder,
             suppress,
             excerpt
         };
@@ -295,6 +424,9 @@ $(document).ready(function () {
         const targetsInput = document.getElementById("therapy_scheme_targets");
         targetsInput.value = JSON.stringify(notCheckedCheckboxes);
 
+        const stubsOrder = document.getElementById("therapy_scheme_stubsOrder");
+        stubsOrder.value = JSON.stringify(getStubsOrder());
+
         const form = document.getElementById("create_therapy_scheme_form");
         form.submit();
 	});
@@ -302,9 +434,10 @@ $(document).ready(function () {
 	$("#generatePDFButton").click(async function () {
 		const currentComments = getCurrentComments();
 		const notCheckedCheckboxes = getNotCheckedCheckboxes();
+        const stubsOrder = getStubsOrder();
 		const suppress = $("#therapy_scheme_suppress").is(":checked");
 		const excerpt = $("#therapy_scheme_excerpt").is(":checked");
-		const response = await generateReport(selectedLabels, currentComments, notCheckedCheckboxes, suppress, excerpt);
+		const response = await generateReport(selectedLabels, currentComments, notCheckedCheckboxes, stubsOrder, suppress, excerpt);
 		const responseStatus = response.status;
 		if (responseStatus === 200) {
 			const form = document.getElementById("generatePDFForm");
@@ -316,9 +449,10 @@ $(document).ready(function () {
 		e.preventDefault();
 		const currentComments = getCurrentComments();
 		const notCheckedCheckboxes = getNotCheckedCheckboxes();
+        const stubsOrder = getStubsOrder();
 		const suppress = $("#therapy_scheme_suppress").is(":checked");
 		const excerpt = $("#therapy_scheme_excerpt").is(":checked");
-		const response = await generateReport(selectedLabels, currentComments, notCheckedCheckboxes, suppress, excerpt);
+		const response = await generateReport(selectedLabels, currentComments, notCheckedCheckboxes, stubsOrder, suppress, excerpt);
 		const responseStatus = response.status;
 		if (responseStatus === 200) {
 			const generateHTMLLink = document.getElementById("generateHTMLLink");
