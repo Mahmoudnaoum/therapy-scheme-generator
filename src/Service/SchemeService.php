@@ -40,22 +40,25 @@ class SchemeService
             unset($selectedLabels[$index]);
 
             $label = $this->labelRepository->find($labelID);
+            $originalLabelStubs = $label->getStubsSortedByPosition();
             $labelStubs = [];
 
             foreach ($stubIDs as $stubID) {
                 $stub = $this->stubRepository->find($stubID);
-                if ($stub) {
+                if (in_array($stub, $originalLabelStubs->getValues())) {
                     $labelStubs[] = $stub;
                 }
             }
             
-            // Fetch all stubs associated with the label
-            $allStubs = $label->getStubs()->toArray();
-            foreach ($allStubs as $stub) {
-                if (!in_array($stub, $labelStubs)) {
-                    $labelStubs[] = $stub;
-                }
-            }
+
+            foreach ( $originalLabelStubs as $stub) {
+              // Check if the stub ID is already in the list
+              if (!in_array($stub->getId(), $stubIDs)) {
+                  // Add the stub to the list
+                  $labelStubs[] = $stub;
+              }
+             }
+
 
             $newTbody .= $this->generateLabelTbody($label, $labelStubs, $suppress, $currentComments, $checkedCheckboxes, $excerpt, $currentLanguage);
 
