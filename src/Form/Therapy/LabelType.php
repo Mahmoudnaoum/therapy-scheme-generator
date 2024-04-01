@@ -21,6 +21,11 @@ class LabelType extends AbstractType
             ->add('reportName', TextType::class, [
                 'label' => 'app-therapy-label-edit-form-report-name',
             ])
+            ->add('stubsOrder', TextType::class, [
+                'label' => false,
+                'mapped' => false,
+                'attr' => ['style' => 'display:none', 'readonly' => true],
+            ])
             ->add('save', SubmitType::class, [
                 'label' => 'app-save-button',
             ])
@@ -31,8 +36,8 @@ class LabelType extends AbstractType
                     'data-bs-toggle' => 'modal',
                     'data-bs-target' => '#confirmModal'
                 ]
-            ])
-        ;
+            ]);
+            
     }
 
     public function configureOptions(OptionsResolver $resolver): void

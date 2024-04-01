@@ -49,9 +49,11 @@ class StubController extends AbstractController
         
         $query->orderBy("stub.$sortField", $direction);
 
-        // Check if you want to hide deleted stubs
         if ($showDeleted != true) {
-            $query->andWhere('stub.isDeleted IS NULL');
+            $query->andWhere($query->expr()->orX(
+                $query->expr()->isNull('stub.isDeleted'),
+                $query->expr()->eq('stub.isDeleted', 0)
+            ));
         }
 
         $pagination = $this->paginator->paginate(
@@ -75,7 +77,8 @@ class StubController extends AbstractController
     {
         $searchValue = $request->get('searchName_stub');
         $searchCriteria = $request->get('searchCriteria','all');
-          
+        $showDeleted = $request->get('showDeleted', 0);  
+
         $sortField = $request->get('sort','id');
         $direction = $request->get('direction', 'asc'); 
       
@@ -83,6 +86,7 @@ class StubController extends AbstractController
             return $this->redirectToRoute('app_therapy_stubs_search', [
                 'searchValue' => $searchValue ,
                 'searchCriteria' => $searchCriteria,
+                'showDeleted' => $showDeleted,
                 'sort' => $sortField,
                 'direction' => $direction,
             ]);
@@ -97,6 +101,7 @@ class StubController extends AbstractController
 
         // Access the selected criteria from the form data
         $searchCriteria = strtolower($searchCriteria);
+        $showDeleted = $request->get('showDeleted'); 
 
         $sort = $request->get('sort');
         $direction = $request->get('direction'); 
@@ -105,6 +110,7 @@ class StubController extends AbstractController
             ->createQueryBuilder('stub')
             ->setFirstResult($request->query->getInt('page', 0))
             ->setMaxResults(self::PAGINATION_PAGE);
+
             
         if ($searchValue !== null) {
             if ($searchCriteria === 'all') {
@@ -118,6 +124,13 @@ class StubController extends AbstractController
                     ->where('stub.' . $searchCriteria . ' LIKE :search')
                     ->setParameter('search', '%' . $searchValue . '%');
             }
+        }
+        
+        if ($showDeleted != true) {
+            $query->andWhere($query->expr()->orX(
+                $query->expr()->isNull('stub.isDeleted'),
+                $query->expr()->eq('stub.isDeleted', 0)
+            ));
         }
         
         $query->orderBy("stub.$sort", $direction);
@@ -134,6 +147,7 @@ class StubController extends AbstractController
             'searchCriteria' => $searchCriteria,
             'sort' => $sort,
             'direction' => $direction,
+            'showDeleted' => $showDeleted
         ]);
     }
 
@@ -211,14 +225,15 @@ class StubController extends AbstractController
 
             // * Removing the old labels
             foreach ($oldLabels as $old) {
-                $old->removeStub($stub);
-                $this->entityManager->persist($old);
+                $old->deleteStub($stub, $this->entityManager);
             }
+
+            $this->entityManager->flush();
+
 
             // * Adding the new labels
             foreach ($newLabels as $new) {
                 $new->addStub($stub);
-                $this->entityManager->persist($new);
             }
 
             $this->entityManager->flush();
@@ -236,6 +251,7 @@ class StubController extends AbstractController
             'stubForm' => $stubForm->createView(),
             "status" => "edit",
             'stub' => $stub,
+            'usedSchemes' => $stubRepository->findSchemesByStubId($id)
         ]);
     }
 

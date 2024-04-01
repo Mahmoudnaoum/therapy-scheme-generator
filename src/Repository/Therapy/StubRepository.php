@@ -136,6 +136,19 @@ class StubRepository extends ServiceEntityRepository
         return $stub;
     }
 
+
+    public function findSchemesByStubId($stubId)
+    {
+        /** @var QueryBuilder $qb */
+        $qb = $this->getEntityManager()->createQueryBuilder();
+
+        $qb->select('s')
+            ->from('App\Entity\Therapy\Scheme', 's')
+            ->where($qb->expr()->like('s.targets', ':stubId'))
+            ->setParameter('stubId', '%stubID=' . $stubId . '%');
+        
+        return $qb->getQuery()->getResult();
+    }
     // /**
     //  * @return Stub[] Returns an array of Stub objects
     //  */

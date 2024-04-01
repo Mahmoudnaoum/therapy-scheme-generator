@@ -173,6 +173,10 @@
         <source>app-modal-label-confirmation</source>
         <target>Bist du dir sicher?</target>
       </trans-unit>
+      <trans-unit id="6HE261x" resname="app-modal-stub-confirmation">
+        <source>app-modal-stub-confirmation</source>
+        <target>Bist du dir sicher?</target>
+      </trans-unit>      
       <trans-unit id="QrvebFl" resname="app-modal-close">
         <source>app-modal-close</source>
         <target>Schließen</target>

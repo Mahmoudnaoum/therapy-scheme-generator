@@ -31,8 +31,8 @@ class Stub
     #[ORM\Column(type: 'boolean', nullable: true)]
     private ?bool $isDeleted;
 
-    #[ORM\ManyToMany(targetEntity: Label::class, mappedBy: 'stubs')]
-    private ?Collection $labels;
+    #[ORM\OneToMany(mappedBy: "stub", targetEntity: LabelStub::class, cascade: ["persist", "remove"])]
+    private ?Collection $labelStubs;
 
     #[ORM\Column(type: 'datetime_immutable', nullable: true)]
     private ?\DateTimeImmutable $createdAt;
@@ -42,7 +42,7 @@ class Stub
 
     public function __construct()
     {
-        $this->labels = new ArrayCollection();
+        $this->labelStubs = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -110,27 +110,62 @@ class Stub
         return $this;
     }
 
-    public function getLabels(): ?Collection
+    public function getLabelStubs(): ?Collection
     {
-        return $this->labels;
+        return $this->labelStubs;
     }
 
-    public function addLabel(Label $label): self
+    public function addLabelStub(LabelStub $labelStub): self
     {
-        if (!$this->labels->contains($label)) {
-            $this->labels[] = $label;
+        if (!$this->labelStubs->contains($labelStub)) {
+            $this->labelStubs[] = $labelStub;
+            $labelStub->setStub($this);
         }
 
         return $this;
     }
 
-    public function removeLabel(Label $label): self
+    public function removeLabelStub(LabelStub $labelStub): self
     {
-        $this->labels->removeElement($label);
+        if ($this->labelStubs->removeElement($labelStub)) {
+            // set the owning side to null (unless already changed)
+            if ($labelStub->getStub() === $this) {
+                $labelStub->setStub(null);
+            }
+        }
 
         return $this;
     }
 
+    public function getLabels(): Collection
+    {
+        $labels = new ArrayCollection();
+        foreach ($this->labelStubs as $labelStub) {
+            $labels[] = $labelStub->getLabel();
+        }
+
+        return $labels;
+    }
+
+    public function addLabel(Label $label): void
+    {
+        $labelStub = new LabelStub();
+        $labelStub->setLabel($label);
+        $labelStub->setStub($this);
+
+        $this->labelStubs[] = $labelStub;
+    }
+
+    public function removeLabel(Label $label): void
+    {
+        foreach ($this->labelStubs as $labelStub) {
+            if ($labelStub->getLabel() === $label) {
+                $this->labelStubs->removeElement($labelStub);
+                break;
+            }
+        }
+    }
+    
     public function getCreatedAt(): ?\DateTimeImmutable
     {
         return $this->createdAt;

@@ -10,6 +10,7 @@
 
 		<div class="mb-3">
 			<form name="search_stub" action="{{ path('app_therapy_stubs_search_redirector') }}" method="post">
+                <input type="hidden" name="showDeleted" value="{{ showDeleted ? '1' : '0' }}">
 				<div class="row g-2">
 					<div class="col-md-8">
 						<input type="search" name="searchName_stub" required="required" class="form-control" aria-describedby="button-addon2">
@@ -32,7 +33,7 @@
 
 
         <div class="mb-3 text-center">
-            <a href="{{ path('app_therapy_stubs_list', {'showDeleted': not showDeleted}) }}" class="btn btn-secondary">
+            <a href="{{ path('app_therapy_stubs_list', {'showDeleted': not showDeleted, 'sort': sort, 'direction': direction}) }}" class="btn btn-secondary">
                 {{ showDeleted ? 'Hide Deleted Stubs' : 'Show Deleted Stubs' }}
             </a>
         </div>
@@ -41,35 +42,35 @@
             <thead>
                 <tr>
                     <th>
-                        <a href="{{ path('app_therapy_stubs_list', {'sort': 'id', 'direction': (sort == 'id' and direction == 'asc') ? 'desc' : 'asc'}) }}" style="display: flex; align-items: center;">
+                        <a href="{{ path('app_therapy_stubs_list', {'sort': 'id', 'direction': (sort == 'id' and direction == 'asc') ? 'desc' : 'asc', 'showDeleted':showDeleted}) }}" style="display: flex; align-items: center;">
                             ID{% if sort is defined and sort == 'id' %}
                                 <span style="margin-left: 0.2em;">{% if direction == 'asc' %} &#9650; {% else %} &#9660; {% endif %}</span>
                             {% endif %}
                         </a>
                     </th>                  
                     <th>
-                        <a href="{{ path('app_therapy_stubs_list', {'sort': 'name', 'direction': (sort == 'name' and direction == 'asc') ? 'desc' : 'asc'}) }}">
+                        <a href="{{ path('app_therapy_stubs_list', {'sort': 'name', 'direction': (sort == 'name' and direction == 'asc') ? 'desc' : 'asc', 'showDeleted':showDeleted}) }}">
                             Name {% if sort is defined and sort == 'name' %} 
                                 {% if direction == 'asc' %} &#9650; {% else %} &#9660; {% endif %} 
                             {% endif %}
                         </a>
                     </th>
                     <th>
-                        <a href="{{ path('app_therapy_stubs_list', {'sort': 'description', 'direction': (sort == 'description' and direction == 'asc') ? 'desc' : 'asc'}) }}">
+                        <a href="{{ path('app_therapy_stubs_list', {'sort': 'description', 'direction': (sort == 'description' and direction == 'asc') ? 'desc' : 'asc', 'showDeleted':showDeleted}) }}">
                             Description {% if sort is defined and sort == 'description' %} 
                                 {% if direction == 'asc' %} &#9650; {% else %} &#9660; {% endif %} 
                             {% endif %}
                         </a>
                     </th>      
                     <th>
-                        <a href="{{ path('app_therapy_stubs_list', {'sort': 'excerpt', 'direction': (sort == 'excerpt' and direction == 'asc') ? 'desc' : 'asc'}) }}">
+                        <a href="{{ path('app_therapy_stubs_list', {'sort': 'excerpt', 'direction': (sort == 'excerpt' and direction == 'asc') ? 'desc' : 'asc', 'showDeleted':showDeleted}) }}">
                             Excerpt {% if sort is defined and sort == 'excerpt' %} 
                                 {% if direction == 'asc' %} &#9650; {% else %} &#9660; {% endif %} 
                             {% endif %}
                         </a>
                     </th>              
                     <th>
-                        <a href="{{ path('app_therapy_stubs_list', {'sort': 'background', 'direction': (sort == 'background' and direction == 'asc') ? 'desc' : 'asc'}) }}">
+                        <a href="{{ path('app_therapy_stubs_list', {'sort': 'background', 'direction': (sort == 'background' and direction == 'asc') ? 'desc' : 'asc', 'showDeleted':showDeleted}) }}">
                             Background {% if sort is defined and sort == 'background' %} 
                                 {% if direction == 'asc' %} &#9650; {% else %} &#9660; {% endif %} 
                             {% endif %}

@@ -8,10 +8,11 @@
 		</div>
 
         <div class="mb-3">
-			<form name="search_stub" action="{{ path('app_therapy_stubs_search_redirector') }}" method="post">
+			<form id="search_stub_form" name="search_stub" action="{{ path('app_therapy_stubs_search_redirector') }}" method="post">
+                <input type="hidden" name="showDeleted" value="{{ showDeleted ? '1' : '0' }}">
 				<div class="row g-2">
 					<div class="col-md-8">
-						<input type="search" name="searchName_stub" required="required" class="form-control" aria-describedby="button-addon2" value="{{ searchValue }}">
+						<input type="search" id="searchValue" name="searchName_stub" required="required" class="form-control" aria-describedby="button-addon2" value="{{ searchValue }}">
 					</div>
 					<div class="col-md-2">
                         <select id="searchCriteria" name="searchCriteria" class="form-select">
@@ -29,41 +30,48 @@
 			</form>
 		</div>
 
+        
+        <div class="mb-3 text-center">
+            <button class="btn btn-secondary" type="button" id="show_deleted_button">
+                {{ showDeleted ? 'Hide Deleted Stubs' : 'Show Deleted Stubs' }}
+            </button>
+        </div>
+
 
         {% if pagination.getTotalItemCount() > 0 %}
             <table id="stubsTable" class="table table-striped">
                 <thead>
                     <tr>
                         <th>
-                            <a href="{{ path('app_therapy_stubs_search_redirector', {'sort': 'id', 'direction': (sort == 'id' and direction == 'asc') ? 'desc' : 'asc', 'searchCriteria': searchCriteria, 'searchName_stub': searchValue}) }}" style="display: flex; align-items: center;">
+                            <a href="{{ path('app_therapy_stubs_search_redirector', {'sort': 'id', 'direction': (sort == 'id' and direction == 'asc') ? 'desc' : 'asc', 'searchCriteria': searchCriteria, 'searchName_stub': searchValue, 'showDeleted':showDeleted}) }}" style="display: flex; align-items: center;">
                                 ID{% if sort is defined and sort == 'id' %}
                                     <span style="margin-left: 0.2em;">{% if direction == 'asc' %} &#9650; {% else %} &#9660; {% endif %}</span>
                                 {% endif %}
                             </a>
                         </th>
                         <th>
-                            <a href="{{ path('app_therapy_stubs_search_redirector', {'sort': 'name', 'direction': (sort == 'name' and direction == 'asc') ? 'desc' : 'asc', 'searchCriteria': searchCriteria, 'searchName_stub': searchValue}) }}">
+                            <a href="{{ path('app_therapy_stubs_search_redirector', {'sort': 'name', 'direction': (sort == 'name' and direction == 'asc') ? 'desc' : 'asc', 'searchCriteria': searchCriteria, 'searchName_stub': searchValue, 'showDeleted':showDeleted}) }}">
                                 Name {% if sort is defined and sort == 'name' %} 
                                     {% if direction == 'asc' %} &#9650; {% else %} &#9660; {% endif %} 
                                 {% endif %}
                             </a>
                         </th>
                         <th>
-                            <a href="{{ path('app_therapy_stubs_search_redirector', {'sort': 'description', 'direction': (sort == 'description' and direction == 'asc') ? 'desc' : 'asc', 'searchCriteria': searchCriteria, 'searchName_stub': searchValue}) }}">
+                            <a href="{{ path('app_therapy_stubs_search_redirector', {'sort': 'description', 'direction': (sort == 'description' and direction == 'asc') ? 'desc' : 'asc', 'searchCriteria': searchCriteria, 'searchName_stub': searchValue, 'showDeleted':showDeleted}) }}">
                                 Description {% if sort is defined and sort == 'description' %} 
                                     {% if direction == 'asc' %} &#9650; {% else %} &#9660; {% endif %} 
                                 {% endif %}
                             </a>
                         </th>
                         <th>
-                            <a href="{{ path('app_therapy_stubs_search_redirector', {'sort': 'excerpt', 'direction': (sort == 'excerpt' and direction == 'asc') ? 'desc' : 'asc', 'searchCriteria': searchCriteria, 'searchName_stub': searchValue}) }}">
+                            <a href="{{ path('app_therapy_stubs_search_redirector', {'sort': 'excerpt', 'direction': (sort == 'excerpt' and direction == 'asc') ? 'desc' : 'asc', 'searchCriteria': searchCriteria, 'searchName_stub': searchValue, 'showDeleted':showDeleted}) }}">
                                 Excerpt {% if sort is defined and sort == 'excerpt' %} 
                                     {% if direction == 'asc' %} &#9650; {% else %} &#9660; {% endif %} 
                                 {% endif %}
                             </a>
                         </th>
                         <th>
-                            <a href="{{ path('app_therapy_stubs_search_redirector', {'sort': 'background', 'direction': (sort == 'background' and direction == 'asc') ? 'desc' : 'asc', 'searchCriteria': searchCriteria, 'searchName_stub': searchValue}) }}">
+                            <a href="{{ path('app_therapy_stubs_search_redirector', {'sort': 'background', 'direction': (sort == 'background' and direction == 'asc') ? 'desc' : 'asc', 'searchCriteria': searchCriteria, 'searchName_stub': searchValue, 'showDeleted':showDeleted}) }}">
                                 Background {% if sort is defined and sort == 'background' %} 
                                     {% if direction == 'asc' %} &#9650; {% else %} &#9660; {% endif %} 
                                 {% endif %}
@@ -104,11 +112,19 @@
     </div>
 
     <script>
+    
         document.addEventListener("DOMContentLoaded", function () {
-            const searchInput = document.getElementById("searchStub");
+
+            document.getElementById('show_deleted_button').addEventListener('click', function() {
+                var form = document.getElementById('search_stub_form');
+                var showDeletedInput = form.querySelector('input[name="showDeleted"]');
+                showDeletedInput.value = showDeletedInput.value === '1' ? '0' : '1';
+                form.submit();
+            });
+
+            const searchInput = document.getElementById("searchValue");
             const searchCriteria = document.getElementById("searchCriteria");
             const stubRows = document.querySelectorAll(".stub-item");
-
             searchInput.addEventListener("input", function () {
                 const searchTerm = searchInput.value.toLowerCase();
                 const selectedCriteria = searchCriteria.value;

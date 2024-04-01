@@ -68,7 +68,8 @@ class StubType extends AbstractType
 
             $builder->addEventListener(FormEvents::PRE_SUBMIT, function(PreSubmitEvent $event){
                 $data = $event->getData();
-                $labels = $data['labels'];
+                
+                $labels = $data['labels'] ?? [];
 
                 for ($i = 0; $i < count($labels); $i++) {
                     if (!is_numeric($labels[$i])) {

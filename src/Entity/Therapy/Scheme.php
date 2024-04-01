@@ -37,6 +37,9 @@ class Scheme
     #[ORM\Column]
     private array $selectedLabels = [];
 
+    #[ORM\Column]
+    private ?array $stubsOrder = [];
+
     public function __toString(): string
     {
         return $this->getName();
@@ -139,6 +142,22 @@ class Scheme
     public function setSelectedLabels(array $selectedLabels): self
     {
         $this->selectedLabels = $selectedLabels;
+
+        return $this;
+    }
+
+    public function getStubsOrder(): array
+    {
+        if($this->stubsOrder) {
+            return $this->stubsOrder;
+        } else {
+            return [];
+        }
+    }
+
+    public function setStubsOrder(array $stubsOrder): self
+    {
+        $this->stubsOrder = $stubsOrder;
 
         return $this;
     }
